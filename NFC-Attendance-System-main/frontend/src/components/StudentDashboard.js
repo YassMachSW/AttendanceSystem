@@ -5,19 +5,28 @@ import NavBar from './NavBar';
 function StudentDashboard() {
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
   const studentUID = user?.uid;
 
   useEffect(() => {
     const fetchAttendanceData = async () => {
+      if (!studentUID) {
+        setAttendanceData([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await getAttendance(studentUID);
+        const list = Array.isArray(response) ? response : response?.attendances || [];
 
-        const sortedData = response.sort((a, b) => 
-          new Date(b.date) - new Date(a.date)
-        );
+        const sortedData = [...list].sort((a, b) => {
+          const dateA = new Date(a.clockIn || a.date || a.createdAt || 0);
+          const dateB = new Date(b.clockIn || b.date || b.createdAt || 0);
+          return dateB - dateA;
+        });
 
         setAttendanceData(sortedData);
       } catch (err) {
@@ -43,6 +52,34 @@ function StudentDashboard() {
     }
   };
 
+  const formatDate = (record) => {
+    const rawDate = record.clockIn || record.date || record.createdAt;
+    if (!rawDate) return '—';
+    const d = new Date(rawDate);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('hr-HR');
+  };
+
+  const formatTime = (dateValue) => {
+    if (!dateValue) return '—';
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getDurationText = (record) => {
+    if (typeof record.durationMinutes === 'number') {
+      return `${record.durationMinutes} min`;
+    }
+    if (record.clockIn && record.clockOut) {
+      const diffMs = new Date(record.clockOut) - new Date(record.clockIn);
+      if (diffMs > 0) {
+        return `${Math.round(diffMs / 60000)} min`;
+      }
+    }
+    return null;
+  };
+
   return (
     <>
       <NavBar />
@@ -56,31 +93,40 @@ function StudentDashboard() {
             <p className="text-gray-500">Učitavanje podataka o prisutnosti...</p>
           ) : attendanceData.length > 0 ? (
             attendanceData.map((classData, index) => {
-              const attendanceDate = index < 3 
-                ? "25.01.2025" 
-                : new Date().toLocaleDateString('hr-HR');
+              const attendanceDate = formatDate(classData);
+              const durationText = getDurationText(classData);
 
               return (
-                <div key={index} className="mb-8">
+                <div key={classData._id || index} className="mb-8">
                   <h2 className="text-3xl font-semibold text-gray-700 mb-4 tracking-wider">
                     {attendanceDate}
                   </h2>
                   <div
-                    className={`mb-6 p-5 rounded-lg shadow-lg ${getCardColor(classData.classId.type)} transition-all`}
+                    className={`mb-6 p-5 rounded-lg shadow-lg ${getCardColor(classData.classId?.type)} transition-all`}
                   >
                     <h3 className="text-xl font-semibold text-white mb-2 tracking-wider font-bold">
-                      {classData.classId.name}
+                      {classData.classId?.name || 'Nastava / Evidencija'}
                     </h3>
                     <p
                       className={`text-xl ${
                         classData.status === 'Prisutan' ? 'text-green-200' : 'text-red-200'
                       } tracking-wide`}
                     >
-                      {classData.status}
+                      {classData.status || 'Evidentirano'}
                     </p>
-                    <p className="text-lg text-gray-100 mt-2 tracking-widest">
-                      {classData.status === 'Prisutan' ? '2/13' : '1/13'}
+                    <p className="text-sm text-white mt-3">
+                      Clock-In: <strong>{formatTime(classData.clockIn)}</strong>
+                      {'  |  '}
+                      Clock-Out:{' '}
+                      <strong>
+                        {classData.clockOut ? formatTime(classData.clockOut) : 'U tijeku'}
+                      </strong>
                     </p>
+                    {durationText && (
+                      <p className="text-sm text-gray-100 mt-1">
+                        Trajanje: <strong>{durationText}</strong>
+                      </p>
+                    )}
                   </div>
                 </div>
               );
