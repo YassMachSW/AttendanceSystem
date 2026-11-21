@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACTAPPAPIURL || 'http://localhost:5000';
-
+const API_BASE_URL = 'https://attendancesystem-3nux.onrender.com';
 function TapPage() {
   const location = useLocation();
   const navigate = useNavigate();
