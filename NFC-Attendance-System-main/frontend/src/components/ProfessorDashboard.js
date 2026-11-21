@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getClasses } from '../service/classesService';
 import NavBar from './NavBar';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACTAPPAPIURL || 'http://localhost:5000';
 
 function ProfessorDashboard() {
   const [classesData, setClassesData] = useState([]);
