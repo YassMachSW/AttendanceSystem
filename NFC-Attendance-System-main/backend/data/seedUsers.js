@@ -1,6 +1,6 @@
 const users = [
     {
-      "email": "yassminemachsw@gmail.com",
+      "email": "123",
       "name": "yassS",
       "surname": "yassS",
       "password": "123",
@@ -8,7 +8,7 @@ const users = [
       "uid": "F4481E"
     },
     {
-      "email": "delightechym@gmail.com",
+      "email": "PPP",
       "name": "yassP",
       "surname": "yassP",
       "password": "123",
