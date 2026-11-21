@@ -60,12 +60,12 @@ const seedClasses = async () => {
     for (const classesData of classes) {
       let assignedUser = defaultManager;
 
-      if (classesData.name === 'Ugradbeni racunalni sustavi') {
+      if (classesData.name === 'Camping Jeep') {
         assignedUser =
-          allUsers.find((u) => u.email === 'sgotov@fesb.hr') || defaultManager;
-      } else if (classesData.name === 'Grid racunalni sustavi') {
+          allUsers.find((u) => u.email === 'ppp') || defaultManager;
+      } else if (classesData.name === 'Camping Jeep') {
         assignedUser =
-          allUsers.find((u) => u.email === 'vplest@fesb.hr') || defaultManager;
+          allUsers.find((u) => u.email === 'ppp') || defaultManager;
       }
 
       const validType = ALLOWED_CLASS_TYPES.includes(classesData.type)
@@ -78,7 +78,7 @@ const seedClasses = async () => {
         roomNumber: classesData.roomNumber || 'Main',
         date: classesData.date || new Date(),
         startTime: classesData.startTime || '08:00',
-        endTime: classesData.endTime || '17:00',
+        endTime: classesData.endTime || '23:59',
         professorId: assignedUser._id,
       });
 

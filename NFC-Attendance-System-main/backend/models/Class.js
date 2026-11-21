@@ -8,7 +8,7 @@ const classSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['predavanje', 'lab', 'auditorne'],
+    enum: ['Store'],
     required: true,
   },
   roomNumber: {
