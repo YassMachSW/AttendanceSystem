@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { getClasses } from '../service/classesService';
 import NavBar from './NavBar';
+import AddEmployeeCard from '../components/AddEmployeeCard';
 
 const API_BASE_URL = process.env.REACTAPPAPIURL || 'http://localhost:5000';
 
@@ -315,6 +316,7 @@ function ProfessorDashboard() {
             </table>
           </div>
         </div>
+        <AddEmployeeCard />
       </div>
     </>
   );
