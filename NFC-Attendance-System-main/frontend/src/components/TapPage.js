@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -7,17 +7,29 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 function TapPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const hasProcessedRef = useRef(false);
 
   const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'error'
   const [resultData, setResultData] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
+    if (hasProcessedRef.current) return;
+    hasProcessedRef.current = true;
+
     const processTap = async () => {
       const searchParams = new URLSearchParams(location.search);
-      const classId = searchParams.get('classId') || localStorage.getItem('lastClassId') || '';
-      if (classId) {
-        localStorage.setItem('lastClassId', classId);
+      const locationParam =
+        searchParams.get('locationId') ||
+        searchParams.get('branchId') ||
+        searchParams.get('classId') ||
+        localStorage.getItem('lastLocationId') ||
+        localStorage.getItem('lastClassId') ||
+        '';
+
+      if (locationParam) {
+        localStorage.setItem('lastLocationId', locationParam);
+        localStorage.setItem('lastClassId', locationParam);
       }
 
       const token = localStorage.getItem('token');
@@ -33,7 +45,7 @@ function TapPage() {
       if (!token || !parsedUser || !parsedUser.uid) {
         const currentPath = `${location.pathname}${location.search}`;
         localStorage.setItem('redirectAfterLogin', currentPath);
-        navigate('/login/student');
+        navigate('/login/employee');
         return;
       }
 
@@ -42,7 +54,12 @@ function TapPage() {
           `${API_BASE_URL}/api/nfc/`,
           {
             uid: parsedUser.uid,
-            ...(classId ? { classId } : {}),
+            ...(locationParam
+              ? {
+                  classId: locationParam,
+                  locationId: locationParam,
+                }
+              : {}),
           },
           {
             headers: {
@@ -73,8 +90,20 @@ function TapPage() {
     });
   };
 
+  const placeName =
+    resultData?.locationName ||
+    resultData?.branchName ||
+    resultData?.placeName ||
+    resultData?.className ||
+    resultData?.classId?.name ||
+    resultData?.attendance?.classId?.name ||
+    '';
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-100 p-6 text-center">
+    <div
+      dir="rtl"
+      className="flex items-center justify-center min-h-screen bg-slate-100 p-6 text-center"
+    >
       <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full">
         {status === 'loading' && (
           <div>
@@ -95,11 +124,17 @@ function TapPage() {
               {resultData.action === 'clock-out' ? 'Clock-Out (יציאה)' : 'Clock-In (כניסה)'}
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {resultData.action === 'clock-out'
                 ? 'נרשמה יציאה בהצלחה'
                 : 'נרשמה כניסה בהצלחה'}
             </h2>
+
+            {placeName && (
+              <p className="text-blue-900 font-semibold mb-4">
+                מקום / סניף: {placeName}
+              </p>
+            )}
 
             {resultData.action === 'clock-in' && resultData.clockIn && (
               <p className="text-gray-700 text-lg">
@@ -125,10 +160,10 @@ function TapPage() {
 
             <button
               type="button"
-              onClick={() => navigate('/student-dashboard')}
+              onClick={() => navigate('/employee-dashboard')}
               className="mt-6 w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              מעבר ללוח הנוכחות שלי
+              מעבר ללוח העובד שלי
             </button>
           </div>
         )}

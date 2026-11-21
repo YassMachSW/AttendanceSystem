@@ -9,18 +9,26 @@ function ProfessorLoginPage() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
+    setError('');
     try {
       const response = await loginUser(professorEmail, password);
       localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify({ _id: response._id ,name: response.name, surname: response.surname }));
-      navigate('/professor-dashboard');
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          _id: response._id,
+          name: response.name,
+          surname: response.surname,
+        })
+      );
+      navigate('/manager-dashboard');
       console.log('Login response:', response);
-    } catch (error) {
-      console.error('Login error:', error);
-      if (error.response && error.response.data) {
-        setError(error.response.data.message || 'Invalid email or password');
+    } catch (err) {
+      console.error('Login error:', err);
+      if (err.response && err.response.data) {
+        setError(err.response.data.message || 'אימייל או סיסמה שגויים');
       } else {
-        setError('Invalid email or password');
+        setError('אימייל או סיסמה שגויים');
       }
     }
   };
@@ -28,25 +36,29 @@ function ProfessorLoginPage() {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleLogin(); 
+      handleLogin();
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-blue-100"
-    style={{
-      backgroundImage: 'url("https://egradnja.hr/sites/default/files/2024/06/17/branka%20juras%20fesb8.jpg")',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      }}>
-    <div className="absolute inset-0 bg-black opacity-30"></div>
-    <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md w-full relative z-10">
-        <h1 className="text-3xl font-bold mb-4 text-blue-900">Prijavite se kao professor</h1>
+    <div
+      className="flex items-center justify-center min-h-screen bg-blue-100"
+      dir="rtl"
+      style={{
+        backgroundImage:
+          'url("https://egradnja.hr/sites/default/files/2024/06/17/branka%20juras%20fesb8.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <div className="absolute inset-0 bg-black opacity-30"></div>
+      <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md w-full relative z-10">
+        <h1 className="text-3xl font-bold mb-4 text-blue-900">כניסת מנהל</h1>
         <input
           type="email"
-          placeholder="Email"
-          className="w-full p-3 mb-4 border border-gray-300 rounded"
+          placeholder="אימייל"
+          className="w-full p-3 mb-4 border border-gray-300 rounded text-right"
           value={professorEmail}
           onChange={(e) => setProfessorEmail(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -54,18 +66,19 @@ function ProfessorLoginPage() {
         />
         <input
           type="password"
-          placeholder="Password"
-          className="w-full p-3 mb-4 border border-gray-300 rounded"
+          placeholder="סיסמה"
+          className="w-full p-3 mb-4 border border-gray-300 rounded text-right"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={handleKeyDown}
         />
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
         <button
+          type="button"
           className="w-full py-3 bg-blue-500 text-white rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
           onClick={handleLogin}
         >
-          Prijava
+          התחברות
         </button>
       </div>
     </div>

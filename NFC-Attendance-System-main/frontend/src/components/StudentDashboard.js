@@ -48,7 +48,7 @@ function StudentDashboard() {
       case 'auditorne':
         return 'bg-green-500';
       default:
-        return 'bg-gray-500';
+        return 'bg-blue-600';
     }
   };
 
@@ -57,7 +57,10 @@ function StudentDashboard() {
     if (!rawDate) return '—';
     const d = new Date(rawDate);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('hr-HR');
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   const formatTime = (dateValue) => {
@@ -69,62 +72,72 @@ function StudentDashboard() {
 
   const getDurationText = (record) => {
     if (typeof record.durationMinutes === 'number') {
-      return `${record.durationMinutes} min`;
+      return `${record.durationMinutes} דקות`;
     }
     if (record.clockIn && record.clockOut) {
       const diffMs = new Date(record.clockOut) - new Date(record.clockIn);
       if (diffMs > 0) {
-        return `${Math.round(diffMs / 60000)} min`;
+        return `${Math.round(diffMs / 60000)} דקות`;
       }
     }
     return null;
   };
 
+  const getPlaceName = (record) => {
+    return (
+      record.branchName ||
+      record.locationName ||
+      record.placeName ||
+      record.classId?.name ||
+      'סניף / מקום עבודה'
+    );
+  };
+
   return (
     <>
       <NavBar />
-      <div className="flex flex-col items-center justify-start min-h-screen bg-blue-200 p-8">
+      <div
+        dir="rtl"
+        className="flex flex-col items-center justify-start min-h-screen bg-blue-200 p-8"
+      >
         <div className="w-full max-w-2xl bg-white p-8 rounded-lg shadow-lg text-center">
-          <h1 className="text-4xl font-semibold mb-6 text-blue-900 tracking-wide">
-            Evidencija za {user ? `${user.name} ${user.surname}` : 'studenta'}
+          <h1 className="text-4xl font-semibold mb-6 text-blue-900">
+            נוכחות ושעות עבור {user ? `${user.name} ${user.surname}` : 'עובד'}
           </h1>
 
           {loading ? (
-            <p className="text-gray-500">Učitavanje podataka o prisutnosti...</p>
+            <p className="text-gray-500">טוען נתוני נוכחות...</p>
           ) : attendanceData.length > 0 ? (
-            attendanceData.map((classData, index) => {
-              const attendanceDate = formatDate(classData);
-              const durationText = getDurationText(classData);
+            attendanceData.map((record, index) => {
+              const attendanceDate = formatDate(record);
+              const durationText = getDurationText(record);
+              const placeName = getPlaceName(record);
 
               return (
-                <div key={classData._id || index} className="mb-8">
-                  <h2 className="text-3xl font-semibold text-gray-700 mb-4 tracking-wider">
+                <div key={record._id || index} className="mb-8">
+                  <h2 className="text-2xl font-semibold text-gray-700 mb-3">
                     {attendanceDate}
                   </h2>
                   <div
-                    className={`mb-6 p-5 rounded-lg shadow-lg ${getCardColor(classData.classId?.type)} transition-all`}
+                    className={`mb-6 p-5 rounded-lg shadow-lg ${getCardColor(record.classId?.type)} transition-all`}
                   >
-                    <h3 className="text-xl font-semibold text-white mb-2 tracking-wider font-bold">
-                      {classData.classId?.name || 'Nastava / Evidencija'}
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      מקום / סניף: {placeName}
                     </h3>
-                    <p
-                      className={`text-xl ${
-                        classData.status === 'Prisutan' ? 'text-green-200' : 'text-red-200'
-                      } tracking-wide`}
-                    >
-                      {classData.status || 'Evidentirano'}
+                    <p className="text-base text-green-100 font-medium">
+                      סטטוס: {record.clockOut ? 'הושלמה כניסה ויציאה' : 'נרשמה כניסה (במשמרת)'}
                     </p>
                     <p className="text-sm text-white mt-3">
-                      Clock-In: <strong>{formatTime(classData.clockIn)}</strong>
+                      כניסה (Clock-In): <strong>{formatTime(record.clockIn)}</strong>
                       {'  |  '}
-                      Clock-Out:{' '}
+                      יציאה (Clock-Out):{' '}
                       <strong>
-                        {classData.clockOut ? formatTime(classData.clockOut) : 'U tijeku'}
+                        {record.clockOut ? formatTime(record.clockOut) : 'טרם נרשמה יציאה'}
                       </strong>
                     </p>
                     {durationText && (
                       <p className="text-sm text-gray-100 mt-1">
-                        Trajanje: <strong>{durationText}</strong>
+                        משך שהייה: <strong>{durationText}</strong>
                       </p>
                     )}
                   </div>
@@ -132,7 +145,7 @@ function StudentDashboard() {
               );
             })
           ) : (
-            <p className="text-gray-500">Nedostupni podaci o prisutnosti.</p>
+            <p className="text-gray-500">אין עדיין נתוני כניסה ויציאה להצגה.</p>
           )}
         </div>
       </div>

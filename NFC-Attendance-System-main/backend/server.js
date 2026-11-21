@@ -1,5 +1,7 @@
-const express = require('express');
 const dotenv = require('dotenv');
+dotenv.config();
+
+const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
@@ -10,8 +12,6 @@ const nfcRoutes = require('./routes/nfcRoutes');
 const classesRoutes = require('./routes/classesRoutes');
 
 const { seedUsers, seedClasses, seedAttendances } = require('./data/seeder');
-
-dotenv.config();
 
 const app = express();
 

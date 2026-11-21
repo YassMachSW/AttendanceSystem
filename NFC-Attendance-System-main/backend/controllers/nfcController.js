@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Attendance = require('../models/Attendance');
 const Class = require('../models/Class');
@@ -5,32 +6,41 @@ const Class = require('../models/Class');
 // @desc    Clock-in / Clock-out attendance via NFC tap
 // @route   POST /api/nfc
 const saveAttendance = async (req, res) => {
-  const { uid, classId: providedClassId } = req.body;
+  const { uid, classId: providedClassId, locationId } = req.body;
 
   if (!uid) {
     return res.status(400).send({ message: 'UID is missing' });
   }
 
   try {
-    const student = await User.findOne({ uid });
+    const employee = await User.findOne({ uid });
 
-    if (!student) {
-      return res.status(404).send({ message: 'Student not found' });
+    if (!employee) {
+      return res.status(404).send({ message: 'User not found' });
     }
 
-    let classId = providedClassId;
+    let classId = providedClassId || locationId;
+    let placeDoc = null;
+
+    if (classId && mongoose.Types.ObjectId.isValid(classId)) {
+      placeDoc = await Class.findById(classId);
+    }
+
+    if (!placeDoc) {
+      const randomPlace = await Class.aggregate([{ $sample: { size: 1 } }]);
+      placeDoc = randomPlace[0] || null;
+      classId = placeDoc?._id;
+    }
+
     if (!classId) {
-      const classIdArray = await Class.aggregate([{ $sample: { size: 1 } }]);
-      classId = classIdArray[0]?._id;
+      return res.status(400).send({ message: 'Location / Class ID is missing' });
     }
 
-    if (!classId) {
-      return res.status(400).send({ message: 'Class ID is missing' });
-    }
+    const placeName = placeDoc?.name || placeDoc?.title || '';
 
     // Check if there is an open session (clocked in, not clocked out yet)
     const openAttendance = await Attendance.findOne({
-      studentId: student._id,
+      studentId: employee._id,
       clockOut: null,
     }).sort({ clockIn: -1 });
 
@@ -49,6 +59,8 @@ const saveAttendance = async (req, res) => {
       return res.status(200).send({
         action: 'clock-out',
         message: 'Clock-out recorded successfully',
+        className: placeName,
+        locationName: placeName,
         clockIn: openAttendance.clockIn,
         clockOut: openAttendance.clockOut,
         durationMinutes,
@@ -58,7 +70,7 @@ const saveAttendance = async (req, res) => {
 
     // Case 2: No open session -> Clock-In
     const attendance = new Attendance({
-      studentId: student._id,
+      studentId: employee._id,
       classId,
       status: 'CheckedIn',
       studentUID: uid,
@@ -71,6 +83,8 @@ const saveAttendance = async (req, res) => {
     return res.status(201).send({
       action: 'clock-in',
       message: 'Clock-in recorded successfully',
+      className: placeName,
+      locationName: placeName,
       clockIn: attendance.clockIn,
       attendance,
     });

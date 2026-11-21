@@ -17,12 +17,12 @@ function ProfessorDashboard() {
 
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
-  const professorId = user?._id;
+  const managerId = user?._id;
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!professorId) {
-        setError('Profesor ID nije dostupan.');
+      if (!managerId) {
+        setError('מזהה מנהל אינו זמין.');
         setLoading(false);
         return;
       }
@@ -32,7 +32,7 @@ function ProfessorDashboard() {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         const [classesResponse, attendancesResponse] = await Promise.all([
-          getClasses(professorId),
+          getClasses(managerId).catch(() => []),
           axios.get(`${API_BASE_URL}/api/attendances`, { headers }).catch(() => ({ data: [] })),
         ]);
 
@@ -43,14 +43,14 @@ function ProfessorDashboard() {
         setAttendancesData(attList);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError('Došlo je do pogreške prilikom učitavanja podataka.');
+        setError('אירעה שגיאה בטעינת הנתונים.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [professorId]);
+  }, [managerId]);
 
   const getCardColor = (type) => {
     switch (type) {
@@ -61,18 +61,18 @@ function ProfessorDashboard() {
       case 'auditorne':
         return 'bg-green-500';
       default:
-        return 'bg-gray-500';
+        return 'bg-blue-600';
     }
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
+    if (!dateString) return '—';
     const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return '-';
+    if (Number.isNaN(date.getTime())) return '—';
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
+    return `${day}/${month}/${year}`;
   };
 
   const formatTime = (dateValue) => {
@@ -102,7 +102,16 @@ function ProfessorDashboard() {
     return `${hours}h ${String(remMins).padStart(2, '0')}m (${(mins / 60).toFixed(2)} שעות)`;
   };
 
-  // סינון רשומות לפי החודש הנבחר (YYYY-MM)
+  const getPlaceName = (rec) => {
+    return (
+      rec.branchName ||
+      rec.locationName ||
+      rec.placeName ||
+      rec.classId?.name ||
+      'סניף / מקום עבודה'
+    );
+  };
+
   const monthlyAttendances = useMemo(() => {
     return attendancesData.filter((rec) => {
       const refDate = rec.clockIn || rec.date || rec.createdAt;
@@ -114,33 +123,33 @@ function ProfessorDashboard() {
     });
   }, [attendancesData, selectedMonth]);
 
-  // חישוב סיכום שעות חודשי לכל סטודנט
-  const monthlySummaryByStudent = useMemo(() => {
+  const monthlySummaryByEmployee = useMemo(() => {
     const map = new Map();
 
     monthlyAttendances.forEach((rec) => {
-      const studentObj = typeof rec.studentId === 'object' && rec.studentId !== null ? rec.studentId : null;
-      const studentKey =
-        studentObj?._id ||
+      const empObj =
+        typeof rec.studentId === 'object' && rec.studentId !== null ? rec.studentId : null;
+      const empKey =
+        empObj?._id ||
         rec.otherId ||
         rec.uid ||
         (typeof rec.studentId === 'string' ? rec.studentId : 'unknown');
 
-      const studentName =
-        studentObj?.name || studentObj?.surname
-          ? `${studentObj?.name || ''} ${studentObj?.surname || ''}`.trim()
-          : rec.studentName || rec.uid || String(studentKey);
+      const empName =
+        empObj?.name || empObj?.surname
+          ? `${empObj?.name || ''} ${empObj?.surname || ''}`.trim()
+          : rec.studentName || rec.uid || String(empKey);
 
-      if (!map.has(studentKey)) {
-        map.set(studentKey, {
-          studentKey,
-          studentName,
+      if (!map.has(empKey)) {
+        map.set(empKey, {
+          empKey,
+          empName,
           totalMinutes: 0,
           sessionsCount: 0,
         });
       }
 
-      const entry = map.get(studentKey);
+      const entry = map.get(empKey);
       entry.totalMinutes += getSessionMinutes(rec);
       entry.sessionsCount += 1;
     });
@@ -151,44 +160,53 @@ function ProfessorDashboard() {
   return (
     <>
       <NavBar />
-      <div className="flex flex-col items-center justify-start min-h-screen bg-blue-200 p-8">
+      <div
+        dir="rtl"
+        className="flex flex-col items-center justify-start min-h-screen bg-blue-200 p-8"
+      >
         <div className="w-full max-w-4xl bg-white p-8 rounded-lg shadow-lg text-center mb-8">
-          <h1 className="text-4xl font-semibold mb-6 text-blue-900 tracking-wide">
-            Nastava profesora {user ? `${user.name} ${user.surname}` : 'profesora'}
+          <h1 className="text-4xl font-semibold mb-6 text-blue-900">
+            לוח בקרה למנהל — {user ? `${user.name} ${user.surname}` : 'מנהל'}
           </h1>
 
           {loading ? (
-            <p className="text-gray-500">Učitavanje podataka o nastavi...</p>
+            <p className="text-gray-500">טוען נתונים...</p>
           ) : error ? (
             <p className="text-red-500">{error}</p>
           ) : classesData.length > 0 ? (
-            classesData.map((classData, index) => (
-              <div key={classData._id || index} className="mb-8">
-                <h2 className="text-3xl font-semibold text-gray-700 mb-4 tracking-wider">
-                  {formatDate(classData.date)}
+            classesData.map((placeItem, index) => (
+              <div key={placeItem._id || index} className="mb-8">
+                <h2 className="text-2xl font-semibold text-gray-700 mb-3">
+                  {formatDate(placeItem.date)}
                 </h2>
                 <div
-                  className={`mb-6 p-5 rounded-lg shadow-lg ${getCardColor(classData.type)} transition-all`}
+                  className={`mb-6 p-5 rounded-lg shadow-lg ${getCardColor(placeItem.type)} transition-all`}
                 >
-                  <h3 className="text-xl font-semibold text-white mb-2 tracking-wider font-bold">
-                    {classData.name}
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    מקום / סניף: {placeItem.name}
                   </h3>
-                  <p className="text-lg text-gray-100 mt-2 tracking-widest">
-                    {classData.roomNumber}
-                  </p>
-                  <p className="text-lg text-gray-100 mt-2 tracking-widest">
-                    {classData.startTime} - {classData.endTime}
-                  </p>
+                  {placeItem.roomNumber && (
+                    <p className="text-base text-gray-100 mt-1">
+                      אזור / חדר: {placeItem.roomNumber}
+                    </p>
+                  )}
+                  {(placeItem.startTime || placeItem.endTime) && (
+                    <p className="text-base text-gray-100 mt-1">
+                      שעות פעילות: {placeItem.startTime} - {placeItem.endTime}
+                    </p>
+                  )}
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-gray-500">Nema dostupnih podataka o nastavi.</p>
+            <p className="text-gray-500">
+              אין סניפים/מקומות מוגדרים בנפרד — רישומי הכניסה והיציאה מופיעים בטבלה למטה.
+            </p>
           )}
         </div>
 
         {/* אזור Clock-In / Clock-Out וסיכום שעות חודשי */}
-        <div className="w-full max-w-4xl bg-white p-8 rounded-lg shadow-lg" dir="rtl">
+        <div className="w-full max-w-4xl bg-white p-8 rounded-lg shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <h2 className="text-2xl font-bold text-blue-900">
               מעקב כניסה/יציאה (NFC) וסיכום שעות חודשי
@@ -207,22 +225,22 @@ function ProfessorDashboard() {
             </div>
           </div>
 
-          {/* סיכום שעות חודשי לכל סטודנט */}
-          <h3 className="text-lg font-bold text-gray-800 mb-3">סיכום שעות חודשי לפי סטודנט</h3>
+          {/* סיכום שעות חודשי לכל עובד */}
+          <h3 className="text-lg font-bold text-gray-800 mb-3">סיכום שעות חודשי לפי עובד</h3>
           <div className="overflow-x-auto mb-8">
             <table className="w-full text-right border-collapse border border-gray-200 text-sm">
               <thead className="bg-blue-50 text-blue-950">
                 <tr>
-                  <th className="border border-gray-200 p-2.5">סטודנט</th>
+                  <th className="border border-gray-200 p-2.5">עובד</th>
                   <th className="border border-gray-200 p-2.5">מספר כניסות</th>
                   <th className="border border-gray-200 p-2.5">סה״כ שעות בחודש</th>
                 </tr>
               </thead>
               <tbody>
-                {monthlySummaryByStudent.length > 0 ? (
-                  monthlySummaryByStudent.map((row) => (
-                    <tr key={row.studentKey} className="hover:bg-gray-50">
-                      <td className="border border-gray-200 p-2.5 font-medium">{row.studentName}</td>
+                {monthlySummaryByEmployee.length > 0 ? (
+                  monthlySummaryByEmployee.map((row) => (
+                    <tr key={row.empKey} className="hover:bg-gray-50">
+                      <td className="border border-gray-200 p-2.5 font-medium">{row.empName}</td>
                       <td className="border border-gray-200 p-2.5">{row.sessionsCount}</td>
                       <td className="border border-gray-200 p-2.5 font-semibold text-blue-900">
                         {formatMinutesAsHours(row.totalMinutes)}
@@ -246,7 +264,8 @@ function ProfessorDashboard() {
             <table className="w-full text-right border-collapse border border-gray-200 text-sm">
               <thead className="bg-gray-100 text-gray-800">
                 <tr>
-                  <th className="border border-gray-200 p-2.5">סטודנט</th>
+                  <th className="border border-gray-200 p-2.5">עובד</th>
+                  <th className="border border-gray-200 p-2.5">מקום / סניף</th>
                   <th className="border border-gray-200 p-2.5">תאריך</th>
                   <th className="border border-gray-200 p-2.5">כניסה (Clock-In)</th>
                   <th className="border border-gray-200 p-2.5">יציאה (Clock-Out)</th>
@@ -256,17 +275,18 @@ function ProfessorDashboard() {
               <tbody>
                 {monthlyAttendances.length > 0 ? (
                   monthlyAttendances.map((rec, idx) => {
-                    const studentObj =
+                    const empObj =
                       typeof rec.studentId === 'object' && rec.studentId !== null ? rec.studentId : null;
-                    const studentName =
-                      studentObj?.name || studentObj?.surname
-                        ? `${studentObj?.name || ''} ${studentObj?.surname || ''}`.trim()
-                        : rec.studentName || rec.uid || 'סטודנט';
+                    const empName =
+                      empObj?.name || empObj?.surname
+                        ? `${empObj?.name || ''} ${empObj?.surname || ''}`.trim()
+                        : rec.studentName || rec.uid || 'עובד';
                     const mins = getSessionMinutes(rec);
 
                     return (
                       <tr key={rec._id || idx} className="hover:bg-gray-50">
-                        <td className="border border-gray-200 p-2.5">{studentName}</td>
+                        <td className="border border-gray-200 p-2.5">{empName}</td>
+                        <td className="border border-gray-200 p-2.5">{getPlaceName(rec)}</td>
                         <td className="border border-gray-200 p-2.5">
                           {formatDate(rec.clockIn || rec.date || rec.createdAt)}
                         </td>
@@ -286,7 +306,7 @@ function ProfessorDashboard() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" className="border border-gray-200 p-4 text-center text-gray-500">
+                    <td colSpan="6" className="border border-gray-200 p-4 text-center text-gray-500">
                       אין נתוני כניסה/יציאה לחודש זה.
                     </td>
                   </tr>
