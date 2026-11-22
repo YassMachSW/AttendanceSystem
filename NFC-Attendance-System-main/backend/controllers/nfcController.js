@@ -36,11 +36,18 @@ const saveAttendance = async (req, res) => {
       return res.status(400).send({ message: 'Location / Class ID is missing' });
     }
 
+    // משייכים את העובד לסניף הנוכחי בלי למחוק סניפים אחרים שלו
+    await User.updateOne(
+      { _id: employee._id },
+      { $addToSet: { assignedClassIds: classId } }
+    );
+
     const placeName = placeDoc?.name || placeDoc?.title || '';
 
-    // Check if there is an open session (clocked in, not clocked out yet)
+    // בדיקת סשן פתוח בסניף הנוכחי
     const openAttendance = await Attendance.findOne({
       studentId: employee._id,
+      classId,
       clockOut: null,
     }).sort({ clockIn: -1 });
 
@@ -59,6 +66,7 @@ const saveAttendance = async (req, res) => {
       return res.status(200).send({
         action: 'clock-out',
         message: 'Clock-out recorded successfully',
+        classId,
         className: placeName,
         locationName: placeName,
         clockIn: openAttendance.clockIn,
@@ -83,6 +91,7 @@ const saveAttendance = async (req, res) => {
     return res.status(201).send({
       action: 'clock-in',
       message: 'Clock-in recorded successfully',
+      classId,
       className: placeName,
       locationName: placeName,
       clockIn: attendance.clockIn,

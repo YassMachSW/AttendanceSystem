@@ -1,14 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { addEmployee } from '../service/userService';
 
-function AddEmployeeCard({ onEmployeeAdded }) {
+function AddEmployeeCard({
+  classes = [],
+  selectedClassId = '',
+  onSelectClassId,
+  onEmployeeAdded,
+}) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [password, setPassword] = useState('');
+  const [classId, setClassId] = useState(selectedClassId || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdEmployee, setCreatedEmployee] = useState(null);
+
+  useEffect(() => {
+    if (selectedClassId) {
+      setClassId(selectedClassId);
+    } else if (classes.length > 0 && !classId) {
+      setClassId(String(classes[0]._id));
+    }
+  }, [selectedClassId, classes, classId]);
+
+  const handleClassChange = (e) => {
+    const val = e.target.value;
+    setClassId(val);
+    if (typeof onSelectClassId === 'function') {
+      onSelectClassId(val);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +39,13 @@ function AddEmployeeCard({ onEmployeeAdded }) {
     setLoading(true);
 
     try {
-      const data = await addEmployee({ email, name, surname, password });
+      const data = await addEmployee({
+        email,
+        name,
+        surname,
+        password,
+        classId: classId || undefined,
+      });
       setCreatedEmployee(data.employee);
       setEmail('');
       setName('');
@@ -35,10 +63,32 @@ function AddEmployeeCard({ onEmployeeAdded }) {
   };
 
   return (
-    <div dir="rtl" className="bg-white p-6 rounded-xl shadow-md border border-slate-200 max-w-lg w-full text-right">
+    <div
+      dir="rtl"
+      className="bg-white p-5 sm:p-6 rounded-xl shadow-md border border-slate-200 max-w-lg w-full text-right"
+    >
       <h2 className="text-xl font-bold text-blue-900 mb-4">הוספת עובד חדש</h2>
 
       <form onSubmit={handleSubmit} className="space-y-3">
+        {classes.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              שיוך לסניף / מקום עבודה
+            </label>
+            <select
+              value={classId}
+              onChange={handleClassChange}
+              className="w-full p-2.5 border border-gray-300 rounded-lg bg-white"
+            >
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.name} {cls.roomNumber ? `(${cls.roomNumber})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">אימייל</label>
           <input
@@ -104,7 +154,8 @@ function AddEmployeeCard({ onEmployeeAdded }) {
         <div className="mt-4 p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm space-y-1">
           <p className="font-bold">העובד נוסף בהצלחה (role: {createdEmployee.role})</p>
           <p>
-            <strong>UID שנוצר:</strong> <span className="font-mono font-bold">{createdEmployee.uid}</span>
+            <strong>UID שנוצר:</strong>{' '}
+            <span className="font-mono font-bold">{createdEmployee.uid}</span>
           </p>
           <p>
             <strong>שם:</strong> {createdEmployee.name} {createdEmployee.surname}

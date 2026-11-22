@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { getClasses } from '../service/classesService';
 import NavBar from './NavBar';
 import AddEmployeeCard from '../components/AddEmployeeCard';
 
-const API_BASE_URL = process.env.REACTAPPAPIURL || 'http://localhost:5000';
+const API_BASE_URL = 'https://attendancesystem-3nux.onrender.com';
 
 function ProfessorDashboard() {
   const [classesData, setClassesData] = useState([]);
   const [attendancesData, setAttendancesData] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -20,38 +21,70 @@ function ProfessorDashboard() {
   const user = storedUser ? JSON.parse(storedUser) : null;
   const managerId = user?._id;
 
+  const fetchDashboardData = useCallback(async () => {
+    if (!managerId) {
+      setError('מזהה מנהל אינו זמין.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const [classesResponse, attendancesResponse] = await Promise.all([
+        getClasses(managerId).catch(() => []),
+        axios
+          .get(`${API_BASE_URL}/api/attendances`, {
+            params: { managerId },
+            headers,
+          })
+          .catch(() => ({ data: [] })),
+      ]);
+
+      const fetchedClasses = Array.isArray(classesResponse) ? classesResponse : [];
+      setClassesData(fetchedClasses);
+
+      if (fetchedClasses.length === 1) {
+        setSelectedClassId(String(fetchedClasses[0]._id));
+      } else if (
+        fetchedClasses.length > 0 &&
+        !fetchedClasses.some((c) => String(c._id) === String(selectedClassId))
+      ) {
+        setSelectedClassId(String(fetchedClasses[0]._id));
+      }
+
+      const allowedClassIds = new Set(fetchedClasses.map((c) => String(c._id)));
+      const attList = Array.isArray(attendancesResponse.data)
+        ? attendancesResponse.data
+        : attendancesResponse.data?.attendances || [];
+
+      const scopedAttendances =
+        allowedClassIds.size > 0
+          ? attList.filter((rec) => {
+              const recClassId =
+                typeof rec.classId === 'object' && rec.classId !== null
+                  ? rec.classId._id
+                  : rec.classId;
+              return recClassId && allowedClassIds.has(String(recClassId));
+            })
+          : [];
+
+      setAttendancesData(scopedAttendances);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('אירעה שגיאה בטעינת הנתונים.');
+    } finally {
+      setLoading(false);
+    }
+  }, [managerId, selectedClassId]);
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!managerId) {
-        setError('מזהה מנהל אינו זמין.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-        const [classesResponse, attendancesResponse] = await Promise.all([
-          getClasses(managerId).catch(() => []),
-          axios.get(`${API_BASE_URL}/api/attendances`, { headers }).catch(() => ({ data: [] })),
-        ]);
-
-        setClassesData(Array.isArray(classesResponse) ? classesResponse : []);
-        const attList = Array.isArray(attendancesResponse.data)
-          ? attendancesResponse.data
-          : attendancesResponse.data?.attendances || [];
-        setAttendancesData(attList);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('אירעה שגיאה בטעינת הנתונים.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
-  }, [managerId]);
+  }, [fetchDashboardData]);
 
   const getCardColor = (type) => {
     switch (type) {
@@ -163,10 +196,10 @@ function ProfessorDashboard() {
       <NavBar />
       <div
         dir="rtl"
-        className="flex flex-col items-center justify-start min-h-screen bg-blue-200 p-8"
+        className="flex flex-col items-center justify-start min-h-screen bg-blue-200 px-3 py-6 sm:p-8"
       >
-        <div className="w-full max-w-4xl bg-white p-8 rounded-lg shadow-lg text-center mb-8">
-          <h1 className="text-4xl font-semibold mb-6 text-blue-900">
+        <div className="w-full max-w-4xl bg-white p-5 sm:p-8 rounded-lg shadow-lg text-center mb-8">
+          <h1 className="text-2xl sm:text-4xl font-semibold mb-6 text-blue-900">
             לוח בקרה למנהל — {user ? `${user.name} ${user.surname}` : 'מנהל'}
           </h1>
 
@@ -177,7 +210,7 @@ function ProfessorDashboard() {
           ) : classesData.length > 0 ? (
             classesData.map((placeItem, index) => (
               <div key={placeItem._id || index} className="mb-8">
-                <h2 className="text-2xl font-semibold text-gray-700 mb-3">
+                <h2 className="text-xl sm:text-2xl font-semibold text-gray-700 mb-3">
                   {formatDate(placeItem.date)}
                 </h2>
                 <div
@@ -201,15 +234,15 @@ function ProfessorDashboard() {
             ))
           ) : (
             <p className="text-gray-500">
-              אין סניפים/מקומות מוגדרים בנפרד — רישומי הכניסה והיציאה מופיעים בטבלה למטה.
+              אין סניפים המשויכים למנהל זה כרגע — רישומי הכניסה והיציאה של הסניפים שלך יופיעו למטה.
             </p>
           )}
         </div>
 
         {/* אזור Clock-In / Clock-Out וסיכום שעות חודשי */}
-        <div className="w-full max-w-4xl bg-white p-8 rounded-lg shadow-lg">
+        <div className="w-full max-w-4xl bg-white p-5 sm:p-8 rounded-lg shadow-lg mb-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-blue-900">
+            <h2 className="text-xl sm:text-2xl font-bold text-blue-900">
               מעקב כניסה/יציאה (NFC) וסיכום שעות חודשי
             </h2>
             <div className="flex items-center gap-2">
@@ -316,7 +349,13 @@ function ProfessorDashboard() {
             </table>
           </div>
         </div>
-        <AddEmployeeCard />
+
+        <AddEmployeeCard
+          classes={classesData}
+          selectedClassId={selectedClassId}
+          onSelectClassId={setSelectedClassId}
+          onEmployeeAdded={fetchDashboardData}
+        />
       </div>
     </>
   );

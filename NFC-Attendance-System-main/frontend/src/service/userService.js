@@ -16,13 +16,14 @@ export const loginUser = async (email, password) => {
   }
 };
 
-export const addEmployee = async ({ email, name, surname, password }) => {
+export const addEmployee = async ({ email, name, surname, password, classId }) => {
   try {
     const response = await apiClient.post('/api/user/employees', {
       email,
       name,
       surname,
       password,
+      ...(classId ? { classId } : {}),
     });
     return response.data;
   } catch (error) {

@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
@@ -29,7 +30,6 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'All fields are required.' });
     }
 
-    // Find user by email
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
@@ -40,6 +40,7 @@ const loginUser = async (req, res) => {
         name: user.name,
         surname: user.surname,
         role: user.role,
+        assignedClassIds: user.assignedClassIds || [],
         token: generateToken(user._id),
       });
     }
@@ -59,6 +60,7 @@ const createEmployee = async (req, res) => {
     const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
     const surname = typeof req.body.surname === 'string' ? req.body.surname.trim() : '';
     const password = typeof req.body.password === 'string' ? req.body.password : '';
+    const classId = req.body.classId;
 
     if (!email || !name || !surname || !password) {
       return res.status(400).json({ message: 'יש למלא אימייל, שם פרטי, שם משפחה וסיסמה.' });
@@ -68,6 +70,11 @@ const createEmployee = async (req, res) => {
     if (existingEmail) {
       return res.status(400).json({ message: 'משתמש עם אימייל זה כבר קיים במערכת.' });
     }
+
+    const validClassId =
+      classId && mongoose.Types.ObjectId.isValid(classId)
+        ? new mongoose.Types.ObjectId(classId)
+        : null;
 
     const uid = await generateUniqueUid();
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -79,6 +86,7 @@ const createEmployee = async (req, res) => {
       surname,
       password: hashedPassword,
       role: 'student',
+      assignedClassIds: validClassId ? [validClassId] : [],
     });
 
     return res.status(201).json({
@@ -90,6 +98,7 @@ const createEmployee = async (req, res) => {
         name: newEmployee.name,
         surname: newEmployee.surname,
         role: newEmployee.role,
+        assignedClassIds: newEmployee.assignedClassIds,
       },
     });
   } catch (error) {

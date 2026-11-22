@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
-const { User } = require('./User');
-const { Class } = require('./Class');
+
 const attendanceSchema = new mongoose.Schema(
   {
     studentId: {
