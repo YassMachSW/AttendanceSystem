@@ -3,6 +3,7 @@ import axios from 'axios';
 import { getClasses } from '../service/classesService';
 import NavBar from './NavBar';
 import AddEmployeeCard from '../components/AddEmployeeCard';
+import ChangePasswordCard from '../components/ChangePasswordCard';
 
 const API_BASE_URL = 'https://attendancesystem-3nux.onrender.com';
 
@@ -22,12 +23,6 @@ function ProfessorDashboard() {
   const managerId = user?._id;
 
   const fetchDashboardData = useCallback(async () => {
-    if (!managerId) {
-      setError('מזהה מנהל אינו זמין.');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -36,10 +31,10 @@ function ProfessorDashboard() {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const [classesResponse, attendancesResponse] = await Promise.all([
-        getClasses(managerId).catch(() => []),
+        managerId ? getClasses(managerId).catch(() => []) : Promise.resolve([]),
         axios
           .get(`${API_BASE_URL}/api/attendances`, {
-            params: { managerId },
+            params: managerId ? { managerId } : {},
             headers,
           })
           .catch(() => ({ data: [] })),
@@ -48,13 +43,8 @@ function ProfessorDashboard() {
       const fetchedClasses = Array.isArray(classesResponse) ? classesResponse : [];
       setClassesData(fetchedClasses);
 
-      if (fetchedClasses.length === 1) {
-        setSelectedClassId(String(fetchedClasses[0]._id));
-      } else if (
-        fetchedClasses.length > 0 &&
-        !fetchedClasses.some((c) => String(c._id) === String(selectedClassId))
-      ) {
-        setSelectedClassId(String(fetchedClasses[0]._id));
+      if (fetchedClasses.length > 0) {
+        setSelectedClassId((prev) => prev || String(fetchedClasses[0]._id));
       }
 
       const allowedClassIds = new Set(fetchedClasses.map((c) => String(c._id)));
@@ -71,7 +61,7 @@ function ProfessorDashboard() {
                   : rec.classId;
               return recClassId && allowedClassIds.has(String(recClassId));
             })
-          : [];
+          : attList;
 
       setAttendancesData(scopedAttendances);
     } catch (err) {
@@ -80,7 +70,7 @@ function ProfessorDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [managerId, selectedClassId]);
+  }, [managerId]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -234,12 +224,11 @@ function ProfessorDashboard() {
             ))
           ) : (
             <p className="text-gray-500">
-              אין סניפים המשויכים למנהל זה כרגע — רישומי הכניסה והיציאה של הסניפים שלך יופיעו למטה.
+              אין סניפים מוגדרים בנפרד — רישומי הכניסה והיציאה מופיעים בטבלה למטה.
             </p>
           )}
         </div>
 
-        {/* אזור Clock-In / Clock-Out וסיכום שעות חודשי */}
         <div className="w-full max-w-4xl bg-white p-5 sm:p-8 rounded-lg shadow-lg mb-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-blue-900">
@@ -259,7 +248,6 @@ function ProfessorDashboard() {
             </div>
           </div>
 
-          {/* סיכום שעות חודשי לכל עובד */}
           <h3 className="text-lg font-bold text-gray-800 mb-3">סיכום שעות חודשי לפי עובד</h3>
           <div className="overflow-x-auto mb-8">
             <table className="w-full text-right border-collapse border border-gray-200 text-sm">
@@ -292,7 +280,6 @@ function ProfessorDashboard() {
             </table>
           </div>
 
-          {/* פירוט כניסות ויציאות */}
           <h3 className="text-lg font-bold text-gray-800 mb-3">פירוט שעות כניסה ויציאה</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-right border-collapse border border-gray-200 text-sm">
@@ -356,6 +343,8 @@ function ProfessorDashboard() {
           onSelectClassId={setSelectedClassId}
           onEmployeeAdded={fetchDashboardData}
         />
+
+        <ChangePasswordCard userId={managerId} />
       </div>
     </>
   );

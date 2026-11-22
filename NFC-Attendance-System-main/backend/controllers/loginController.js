@@ -110,7 +110,45 @@ const createEmployee = async (req, res) => {
   }
 };
 
+// @desc    Change user password
+// @route   PUT /api/user/change-password
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.body.userId || req.body._id;
+    const currentPassword =
+      typeof req.body.currentPassword === 'string' ? req.body.currentPassword : '';
+    const newPassword = typeof req.body.newPassword === 'string' ? req.body.newPassword : '';
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'יש למלא סיסמה נוכחית וסיסמה חדשה.' });
+    }
+
+    if (newPassword.length < 3) {
+      return res.status(400).json({ message: 'הסיסמה החדשה קצרה מדי.' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'משתמש לא נמצא.' });
+    }
+
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'הסיסמה הנוכחית שגויה.' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.status(200).json({ message: 'הסיסמה עודכנה בהצלחה!' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   loginUser,
   createEmployee,
+  changePassword,
 };
