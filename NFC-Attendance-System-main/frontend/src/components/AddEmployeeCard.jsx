@@ -65,20 +65,25 @@ function AddEmployeeCard({
   return (
     <div
       dir="rtl"
-      className="bg-white p-5 sm:p-6 rounded-xl shadow-md border border-slate-200 max-w-lg w-full text-right"
+      className="bg-white/95 backdrop-blur p-6 sm:p-7 rounded-2xl shadow-sm border border-slate-200/80 w-full text-right"
     >
-      <h2 className="text-xl font-bold text-blue-900 mb-4">הוספת עובד חדש</h2>
+      <div className="mb-5 pb-3 border-b border-slate-100">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">
+          YASSMINE-MACHOUR • Employee Onboarding
+        </span>
+        <h2 className="text-xl font-bold text-slate-900 mt-2">הוספת עובד חדש לסניף</h2>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {classes.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               שיוך לסניף / מקום עבודה
             </label>
             <select
               value={classId}
               onChange={handleClassChange}
-              className="w-full p-2.5 border border-gray-300 rounded-lg bg-white"
+              className="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50/60 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             >
               {classes.map((cls) => (
                 <option key={cls._id} value={cls._id}>
@@ -90,72 +95,80 @@ function AddEmployeeCard({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">אימייל</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">אימייל</label>
           <input
             type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="לדוגמה: emp1@company.com או 123"
-            className="w-full p-2.5 border border-gray-300 rounded-lg"
+            className="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50/60 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             required
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">שם פרטי</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">שם פרטי</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="שם פרטי"
-              className="w-full p-2.5 border border-gray-300 rounded-lg"
+              className="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50/60 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">שם משפחה</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">שם משפחה</label>
             <input
               type="text"
               value={surname}
               onChange={(e) => setSurname(e.target.value)}
               placeholder="שם משפחה"
-              className="w-full p-2.5 border border-gray-300 rounded-lg"
+              className="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50/60 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">סיסמה</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">סיסמה</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="סיסמה"
-            className="w-full p-2.5 border border-gray-300 rounded-lg"
+            className="w-full p-2.5 border border-slate-300 rounded-xl bg-slate-50/60 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             required
           />
         </div>
 
-        {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
+        {error && (
+          <p className="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-xl p-2.5">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl font-semibold shadow-sm hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 transition-all"
         >
           {loading ? 'מוסיף עובד...' : 'הוסף עובד'}
         </button>
       </form>
 
       {createdEmployee && (
-        <div className="mt-4 p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm space-y-1">
-          <p className="font-bold">העובד נוסף בהצלחה (role: {createdEmployee.role})</p>
+        <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-sm space-y-1">
+          <p className="font-bold text-emerald-800">
+            העובד נוסף בהצלחה (role: {createdEmployee.role})
+          </p>
           <p>
             <strong>UID שנוצר:</strong>{' '}
-            <span className="font-mono font-bold">{createdEmployee.uid}</span>
+            <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border border-emerald-200">
+              {createdEmployee.uid}
+            </span>
           </p>
           <p>
             <strong>שם:</strong> {createdEmployee.name} {createdEmployee.surname}
